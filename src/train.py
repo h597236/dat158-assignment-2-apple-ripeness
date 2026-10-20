@@ -31,7 +31,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.metrics import (ConfusionMatrixDisplay, classification_report,
                              precision_recall_curve)
-from sklearn.model_selection import GridSearchCV, GroupKFold, cross_val_predict, cross_val_score
+from sklearn.model_selection import GridSearchCV, StratifiedGroupKFold, cross_val_predict, cross_val_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -43,12 +43,20 @@ CLASS_NAMES = ["umoden", "moden"]
 FEATURE_SETS = ["color", "pixels"]
 
 
+# Berre ca. 14 % av epla er modne. class_weight="balanced" gjer at kvart modent eple
+# tel meir under treninga, så modellen ikkje berre lærer å seie «umoden» om alt.
+BALANCED = "balanced"
+
+
 def candidate_models():
     return {
-        "Logistisk regresjon": make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)),
-        "SGDClassifier": make_pipeline(StandardScaler(), SGDClassifier(random_state=RANDOM_STATE)),
-        "Random forest": RandomForestClassifier(n_estimators=200, n_jobs=-1, random_state=RANDOM_STATE),
-        "SVC (RBF)": make_pipeline(StandardScaler(), SVC()),
+        "Logistisk regresjon": make_pipeline(StandardScaler(),
+                                             LogisticRegression(max_iter=2000, class_weight=BALANCED)),
+        "SGDClassifier": make_pipeline(StandardScaler(),
+                                       SGDClassifier(class_weight=BALANCED, random_state=RANDOM_STATE)),
+        "Random forest": RandomForestClassifier(n_estimators=200, class_weight=BALANCED,
+                                                n_jobs=-1, random_state=RANDOM_STATE),
+        "SVC (RBF)": make_pipeline(StandardScaler(), SVC(class_weight=BALANCED)),
     }
 
 
@@ -60,8 +68,9 @@ def search_spaces(quick: bool):
         rf = {"n_estimators": [100, 300], "max_depth": [None, 10, 20], "min_samples_leaf": [1, 5]}
         svc = {"svc__C": [0.1, 1, 10], "svc__gamma": ["scale", 0.01, 0.1]}
     return {
-        "Random forest": (RandomForestClassifier(n_jobs=-1, random_state=RANDOM_STATE), rf),
-        "SVC (RBF)": (make_pipeline(StandardScaler(), SVC()), svc),
+        "Random forest": (RandomForestClassifier(class_weight=BALANCED, n_jobs=-1,
+                                                 random_state=RANDOM_STATE), rf),
+        "SVC (RBF)": (make_pipeline(StandardScaler(), SVC(class_weight=BALANCED)), svc),
     }
 
 
@@ -93,8 +102,9 @@ def main():
     print(f"Trening: {len(train_idx)} eple frå {len(set(g_train))} foto, {y_train.mean():.0%} modne")
     print(f"Test:    {len(test_idx)} eple frå {len(set(groups[test_idx]))} foto, {y_test.mean():.0%} modne")
 
-    # GroupKFold: kvar fold held på heile foto, same grunn som for testsplitten
-    cv = GroupKFold(n_splits=args.folds)
+    # Kvar fold held på heile foto (same grunn som for testsplitten), og har om lag
+    # same andel modne eple som resten.
+    cv = StratifiedGroupKFold(n_splits=args.folds, shuffle=True, random_state=RANDOM_STATE)
 
     # ------------------------------------------------------------ baseline
     section("Baseline")
@@ -145,13 +155,19 @@ def main():
     print(classification_report(y_train, (proba_cv >= 0.5).astype(int), target_names=CLASS_NAMES))
 
     precision, recall, thresholds = precision_recall_curve(y_train, proba_cv)
-    ok = np.where(precision[:-1] >= args.target_precision)[0]
+    p, r = precision[:-1], recall[:-1]
+    ok = np.where(p >= args.target_precision)[0]
     if len(ok):
-        threshold = float(thresholds[ok[0]])
-        print(f"Terskel {threshold:.3f} gir precision {precision[ok[0]]:.3f}, recall {recall[ok[0]]:.3f}")
+        i = ok[0]  # lågaste terskel som når målet = høgast mogleg recall
+        threshold_rule = f"lågaste terskel med precision ≥ {args.target_precision}"
     else:
-        threshold = 0.5
-        print(f"Nådde ikkje precision {args.target_precision}; brukar 0.5")
+        # Målet er uoppnåeleg: vel terskelen med best balanse mellom precision og recall
+        f1 = 2 * p * r / np.maximum(p + r, 1e-12)
+        i = int(np.argmax(f1))
+        threshold_rule = "høgast F1 (precision-målet var uoppnåeleg)"
+        print(f"Høgaste precision modellen når: {p.max():.3f}, lågare enn målet {args.target_precision}.")
+    threshold = float(thresholds[i])
+    print(f"Terskel {threshold:.3f} ({threshold_rule}): precision {p[i]:.3f}, recall {r[i]:.3f}")
 
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.plot(thresholds, precision[:-1], label="precision")
@@ -213,11 +229,12 @@ def main():
         "feature_set": best_fs, "model": best_name,
         "best_params": grids[best_name].best_params_,
         "cv_f1": grids[best_name].best_score_,
-        "threshold": threshold, "target_precision": args.target_precision,
+        "threshold": threshold, "threshold_rule": threshold_rule,
+        "target_precision": args.target_precision,
         "n_train": int(len(train_idx)), "n_test": int(len(test_idx)),
         "test_at_0.5": report_05, "test_at_threshold": report_t,
     }
-    (args.reports / "metrics.json").write_text(json.dumps(metrics, indent=2, ensure_ascii=False))
+    (args.reports / "metrics.json").write_text(json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8")
 
     section("Ferdig")
     print(f"Modell:    {args.model_out}")

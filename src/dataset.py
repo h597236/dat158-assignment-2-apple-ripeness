@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from PIL import Image
-from sklearn.model_selection import GroupShuffleSplit
+from sklearn.model_selection import StratifiedGroupKFold
 
 from features import extract, feature_names
 
@@ -19,7 +19,7 @@ def load_meta(data_dir: Path = DATA) -> pd.DataFrame:
     if not path.exists():
         raise SystemExit(f"Fann ikkje {path}. Køyr scripts/download_data.py og "
                          "src/prepare_crops.py først (sjå README).")
-    return pd.read_csv(path)
+    return pd.read_csv(path, encoding="utf-8")
 
 
 def load_features(meta: pd.DataFrame, feature_set: str, data_dir: Path = DATA) -> pd.DataFrame:
@@ -42,8 +42,12 @@ def labels_and_groups(meta: pd.DataFrame):
 
 
 def group_split(y, groups, test_size: float = 0.2, seed: int = RANDOM_STATE):
-    """Trenings-/testsplitt per foto, så eple frå same foto aldri er på begge sider."""
-    gss = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
-    train_idx, test_idx = next(gss.split(np.zeros(len(y)), y, groups))
+    """Trenings-/testsplitt per foto, så eple frå same foto aldri er på begge sider.
+
+    StratifiedGroupKFold held kvart foto samla og prøver samtidig å gi trening og
+    test same andel modne eple. Vi tek éin av foldane som testsett (5 foldar = 20 %).
+    """
+    sgkf = StratifiedGroupKFold(n_splits=round(1 / test_size), shuffle=True, random_state=seed)
+    train_idx, test_idx = next(sgkf.split(np.zeros(len(y)), y, groups))
     assert not set(groups[train_idx]) & set(groups[test_idx]), "Same foto i trening og test!"
     return train_idx, test_idx

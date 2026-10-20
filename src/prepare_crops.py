@@ -125,7 +125,7 @@ def load_coco(raw: Path, images_by_stem):
     out = []
     for jf in raw.rglob("*.json"):
         try:
-            d = json.loads(jf.read_text())
+            d = json.loads(jf.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError):
             continue
         if not isinstance(d, dict) or "annotations" not in d or "images" not in d:
@@ -152,7 +152,7 @@ def load_yolo(raw: Path, images_by_stem, class_names):
         if path is None:
             continue
         W, H = Image.open(path).size
-        for line in tf.read_text().splitlines():
+        for line in tf.read_text(encoding="utf-8").splitlines():
             parts = line.split()
             if len(parts) < 5:
                 continue
@@ -236,7 +236,7 @@ def main():
             rows.append({"file": f"{lab}/{fname}", "label": lab, "source_image": p.name,
                          "group": group_key(p.stem), "width": crop.width, "height": crop.height})
 
-    with open(out / "metadata.csv", "w", newline="") as f:
+    with open(out / "metadata.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)
