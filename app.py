@@ -48,6 +48,11 @@ def apple_size_px(img: Image.Image, size_pct: float) -> int:
     return max(10, int(min(img.size) * size_pct / 100))
 
 
+def pct(p: float) -> str:
+    """Prosent med éin desimal, runda NED, så 96.96 % aldri blir vist som «97 %» når terskelen er 97 %."""
+    return f"{int(p * 1000) / 10:.1f} %"
+
+
 def verdict(p: float) -> str:
     return "Moden" if p >= THRESHOLD else "Umoden"
 
@@ -72,7 +77,7 @@ def draw(img: Image.Image, marks: list) -> Image.Image:
 
 
 def table(marks: list) -> pd.DataFrame:
-    return pd.DataFrame([{"Nr": i, "Vurdering": verdict(m["p"]), "P(moden)": f"{m['p']:.0%}"}
+    return pd.DataFrame([{"Nr": i, "Vurdering": verdict(m["p"]), "P(moden)": pct(m["p"])}
                          for i, m in enumerate(marks, start=1)], columns=TABLE_COLUMNS)
 
 
@@ -83,7 +88,7 @@ def summary(marks: list) -> str:
     last = marks[-1]
     red = color_features(last["crop"])[COLOR_FEATURE_NAMES.index("red_fraction")]
     return (f"### Eple {len(marks)}: {'🍎 Moden – klar for plukking' if last['ripe'] else '🍏 Umoden – la det henge litt til'}\n"
-            f"Sannsyn for moden: **{last['p']:.0%}** (må vere minst {THRESHOLD:.0%} for «moden»)  \n"
+            f"Sannsyn for moden: **{pct(last['p'])}** (må vere minst {pct(THRESHOLD)} for «moden»)  \n"
             f"Andel raude piksel i utklippet: {red:.0%}\n\n"
             f"**Totalt: {n_ripe} av {len(marks)} vurderte eple er klare for plukking.**")
 
@@ -136,7 +141,8 @@ with gr.Blocks(title="Er eplet klart for plukking?") as demo:
         "vurderer om det er modent, og merkar det på biletet: "
         "<span style='color:rgb(220,40,40)'>■ raud = moden</span>, "
         "<span style='color:rgb(60,180,60)'>■ grøn = umoden</span>.  \n"
-        "Juster eplestorleiken til ruta dekkjer heile eplet, men lite blad rundt."
+        "Juster eplestorleiken til ruta dekkjer heile eplet, men lite blad rundt. "
+        "Unngå at fleire eple kjem med i same rute: då vurderer modellen alle saman."
     )
     original = gr.State(None)
     marks = gr.State([])
@@ -159,7 +165,7 @@ with gr.Blocks(title="Er eplet klart for plukking?") as demo:
     gr.Markdown(
         f"Modell: {bundle['model_name']} på trekksettet «{FEATURE_SET}», trena på "
         "Fuji Ripeness & Size Dataset (Zhu et al., 2025). «Moden» tyder her at overflata "
-        f"hovudsakleg er raud. Terskelen ({THRESHOLD:.0%}) er sett høgt for å unngå å plukke umodne eple."
+        f"hovudsakleg er raud. Terskelen ({pct(THRESHOLD)}) er sett høgt for å unngå å plukke umodne eple."
     )
 
     outputs = [image, marks, crop_view, results, result]
