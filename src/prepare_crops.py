@@ -1,12 +1,18 @@
 """Klipper ut kvart annotert eple frå datasettbileta til data/crops/{ripe,unripe}/
 og skriv data/crops/metadata.csv med éi rad per eple.
 
-Støttar COCO (.json) og YOLO (.txt per bilete). Sjekk formatet etter nedlasting:
-    python src/prepare_crops.py --inspect
+Fuji-datasettet brukar VIA-format (VGG Image Annotator): éi JSON-fil per split
+(train/val/test), der kvart eple har ein boks eller polygon og attributtet
+"Ripeness": "ripe"/"unripe". COCO og YOLO er òg støtta, om de byter datasett.
 
-Kolonna `group` i metadata.csv seier kva foto eit eple kjem frå (tiles som
-_MG_2657_24.png og _MG_2657_25.png får same gruppe). Notatboka brukar denne til
-å splitte trening/test slik at eple frå same foto aldri havnar på begge sider.
+    python src/prepare_crops.py --inspect   # vis kva som blir funne, lagrar ingenting
+    python src/prepare_crops.py
+
+Vi brukar ALLE bileta og lagar vår eigen trenings-/testsplitt seinare, gruppert
+per foto. Kolonna `group` i metadata.csv seier kva foto/scene eit eple kjem frå:
+tiles som _MG_2657_24.png og _MG_2657_25.png er utsnitt av same foto, og
+2022_06_17_1_0m_HIGH_P1.png / ..._LOW_P1.png er same scene frå ulik høgd.
+Desse må aldri hamne på kvar si side av splitten.
 """
 import argparse
 import json
@@ -31,12 +37,87 @@ def label_from_name(name: str):
 
 
 def group_key(stem: str) -> str:
-    """'_MG_2657_24' -> '_MG_2657' så tiles frå same foto blir halde saman."""
+    """Kva foto/scene eit bilete høyrer til.
+
+    '_MG_2657_24'               -> '_MG_2657'       (tiles av same foto)
+    '2022_06_17_1_0m_HIGH_P1'   -> '2022_06_17_P1'  (same dag og posisjon, ulik høgd/avstand)
+    """
+    m = re.match(r"^(\d{4}_\d{2}_\d{2})_.*_(P\d+)$", stem)
+    if m:
+        return f"{m.group(1)}_{m.group(2)}"
     return re.sub(r"_\d+$", "", stem)
 
 
 def find_images(raw: Path):
     return {p.stem: p for p in raw.rglob("*") if p.suffix.lower() in IMG_EXT}
+
+
+def region_label(attrs: dict):
+    """Hent ripe/unripe frå region_attributes, t.d. {"Ripeness": "ripe"}."""
+    for k, v in attrs.items():
+        if "ripe" in k.lower() and isinstance(v, str):
+            return label_from_name(v)
+    for v in attrs.values():  # reserve: ein verdi som sjølv heiter ripe/unripe
+        if isinstance(v, str) and label_from_name(v):
+            return label_from_name(v)
+    return None
+
+
+def shape_to_box(sa: dict):
+    if sa.get("name") == "rect":
+        return [sa["x"], sa["y"], sa["x"] + sa["width"], sa["y"] + sa["height"]]
+    if "all_points_x" in sa:  # polygon / polyline
+        xs, ys = sa["all_points_x"], sa["all_points_y"]
+        return [min(xs), min(ys), max(xs), max(ys)]
+    if sa.get("name") == "circle":
+        return [sa["cx"] - sa["r"], sa["cy"] - sa["r"], sa["cx"] + sa["r"], sa["cy"] + sa["r"]]
+    if sa.get("name") == "ellipse":
+        return [sa["cx"] - sa["rx"], sa["cy"] - sa["ry"], sa["cx"] + sa["rx"], sa["cy"] + sa["ry"]]
+    return None
+
+
+def load_via(raw: Path, images_by_stem):
+    """VIA-format: {"<filnamn><storleik>": {"filename", "regions": [...]}, ...}."""
+    out, seen, stats = [], set(), Counter()
+    for jf in sorted(raw.rglob("*.json")):
+        try:
+            d = json.loads(jf.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if isinstance(d, dict) and "_via_img_metadata" in d:  # VIA-prosjektfil
+            d = d["_via_img_metadata"]
+        if not isinstance(d, dict) or not d:
+            continue
+        entries = [v for v in d.values() if isinstance(v, dict) and "regions" in v]
+        if not entries:
+            continue
+        n_before = len(out)
+        for e in entries:
+            fname = e["filename"]
+            if fname in seen:  # same bilete i fleire filer: bruk berre første
+                stats["duplikat-bilete"] += 1
+                continue
+            seen.add(fname)
+            # Bileta ligg i <split>/images/ ved sida av JSON-fila; reserve: søk på namn
+            path = jf.parent / "images" / fname
+            if not path.exists():
+                path = images_by_stem.get(Path(fname).stem)
+            if path is None:
+                stats["manglar bildefil"] += 1
+                continue
+            regions = e["regions"].values() if isinstance(e["regions"], dict) else e["regions"]
+            for r in regions:
+                stats[f"form: {r['shape_attributes'].get('name')}"] += 1
+                lab = region_label(r.get("region_attributes", {}))
+                box = shape_to_box(r["shape_attributes"])
+                if lab is None or box is None:
+                    stats["utan etikett eller ukjend form"] += 1
+                    continue
+                out.append((path, box, lab))
+        print(f"  {jf.relative_to(raw)}: {len(entries)} bilete, {len(out) - n_before} eple")
+    for k, v in sorted(stats.items()):
+        print(f"    {k}: {v}")
+    return out
 
 
 def load_coco(raw: Path, images_by_stem):
@@ -89,7 +170,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default="data/raw")
     ap.add_argument("--out", default="data/crops")
-    ap.add_argument("--format", choices=["auto", "coco", "yolo"], default="auto")
+    ap.add_argument("--format", choices=["auto", "via", "coco", "yolo"], default="auto")
     ap.add_argument("--yolo-classes", default="ripe,unripe",
                     help="Klassenamn i YOLO-rekkjefølgje, kommaseparert")
     ap.add_argument("--min-size", type=int, default=20, help="Hopp over eple mindre enn dette (px)")
@@ -102,7 +183,11 @@ def main():
     print(f"Fann {len(images)} bilete under {raw}")
 
     anns = []
-    if args.format in ("auto", "coco"):
+    if args.format in ("auto", "via"):
+        anns = load_via(raw, images)
+        if anns:
+            print(f"VIA: {len(anns)} annoteringar")
+    if not anns and args.format in ("auto", "coco"):
         anns = load_coco(raw, images)
         if anns:
             print(f"COCO: {len(anns)} annoteringar")
@@ -116,9 +201,15 @@ def main():
                          "label_from_name() eller --yolo-classes justerast.")
 
     print("Klassefordeling:", Counter(lab for _, _, lab in anns))
+    groups = {group_key(p.stem) for p, _, _ in anns}
+    print(f"Fordelt på {len({p for p, _, _ in anns})} bilete og {len(groups)} foto/scener")
     if args.inspect:
+        sides = sorted(min(b[2] - b[0], b[3] - b[1]) for _, b, _ in anns)
+        print(f"Eplestorleik (minste side): median {sides[len(sides) // 2]:.0f}px, "
+              f"{sum(s < args.min_size for s in sides)} under --min-size {args.min_size}px")
+        print("Døme:")
         for p, box, lab in anns[:5]:
-            print(" ", p.name, [round(v) for v in box], lab)
+            print(f"  {p.name}  {[round(v) for v in box]}  {lab}  gruppe={group_key(p.stem)}")
         return
 
     by_image = defaultdict(list)
