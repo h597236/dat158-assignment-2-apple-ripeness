@@ -10,30 +10,53 @@ Alt er bygd med verktøya frå kurset: scikit-learn, pandas, matplotlib, Jupyter
 
 ## Oppsett
 
+Krev Python 3.10 eller nyare. Alle kommandoane under blir køyrde frå rotmappa i repoet,
+éin linje om gongen.
+
+### 1. Lag eit virtuelt miljø og installer pakkane
+
 ```bash
-python -m venv .venv
+py -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Steg for steg
+### 2. Kaggle-token (berre første gong)
 
-```bash
-# 1. Last ned data (krev Kaggle API-nøkkel, sjå scripts/download_data.sh)
-bash scripts/download_data.sh
+1. Logg inn på [kaggle.com/settings](https://www.kaggle.com/settings) → **API Tokens** → **Generate New Token**.
+2. Kopier tokenet.
+3. Køyr skriptet under og lim inn tokenet når du blir spurd. Det blir ikkje vist når du limer inn.
 
-# 2. Sjekk at annotasjonane blir lesne rett, deretter klipp ut kvart eple
+```
+python scripts/setup_kaggle.py
+```
+
+Tokenet blir lagra i `.kaggle`-mappa i heimemappa di, utanfor repoet. Kvar person treng sitt eige.
+Lag ikkje fila sjølv i PowerShell: då kan ho få feil teiknkoding, og Kaggle klarer ikkje lese ho.
+
+### 3. Last ned data
+
+```
+python scripts/download_data.py
+```
+
+## Køyring
+
+```
 python src/prepare_crops.py --inspect
 python src/prepare_crops.py
-
-# 3. Tren, evaluer og lagre modellen (lagar models/ og reports/)
-python src/train.py              # --quick for eit raskare hyperparametersøk
-
-# 4. Start nettsida
+python src/train.py
 python app.py
 ```
 
-Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Den trenar ingenting.
+1. `--inspect` viser kor mange eple som vart funne og fordelinga mellom `ripe` og `unripe`, utan å lagre noko.
+   Sjå at begge klassane er med før de går vidare.
+2. `prepare_crops.py` klipper ut kvart eple til `data/crops/`.
+3. `train.py` trenar, evaluerer og lagrar modellen i `models/` og resultata i `reports/`.
+   Bruk `--quick` for ei raskare prøvekøyring.
+4. `app.py` startar nettsida. Opne lenkja som blir skriven ut.
+
+Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Ho trenar ingenting.
 
 ## Struktur
 
