@@ -1,0 +1,11 @@
+# Rådata, utklipp og trekk-cache blir ikkje lagt i repoet (lisens + storleik).
+# Last ned med scripts/download_data.sh
+data/
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+kaggle.json
+
+# models/apple_model.joblib SKAL med i repoet, elles fungerer ikkje
+# nettsida når ho blir publisert.
