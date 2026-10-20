@@ -8,11 +8,13 @@ Kjelde: Zhu et al. (2025), "Foundation Model-Based Apple Ripeness and Size
 Estimation for Selective Harvesting", arXiv:2502.01850
 """
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 DATASET = "zhukeyi1/fuji-ripeness-and-size-dataset"
+SIZE_GB = 14
 ROOT = Path(__file__).resolve().parent.parent
 DEST = ROOT / "data" / "raw"
 KAGGLE_DIR = Path.home() / ".kaggle"
@@ -35,7 +37,16 @@ def check_token():
 def main():
     check_token()
     DEST.mkdir(parents=True, exist_ok=True)
-    print(f"Lastar ned {DATASET} til {DEST} (kan ta ei stund) ...")
+
+    free_gb = shutil.disk_usage(DEST).free / 1e9
+    print(f"Datasettet er om lag {SIZE_GB} GB, og treng rundt {2 * SIZE_GB} GB ledig medan det blir pakka ut.")
+    print(f"Ledig plass på disken: {free_gb:.0f} GB")
+    if free_gb < 2 * SIZE_GB:
+        print("⚠️  Det kan bli for lite plass.")
+    if input("Vil du halde fram? [j/N] ").strip().lower() not in ("j", "ja", "y", "yes"):
+        sys.exit("Avbrote.")
+
+    print(f"Lastar ned {DATASET} til {DEST} (kan ta lang tid) ...")
     # Kaggle-CLI-en ligg i same venv som Python; køyr han via same tolk.
     cmd = [sys.executable, "-m", "kaggle", "datasets", "download",
            "-d", DATASET, "-p", str(DEST), "--unzip"]
