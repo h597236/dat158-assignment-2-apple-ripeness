@@ -1,3 +1,5 @@
+Readme utan kjelder · MD
+
 # Er eplet klart for plukking?
 
 ML-basert nettside som vurderer om eit eple er modent nok til å plukkast, ut frå eit bilete.
@@ -15,11 +17,13 @@ Krev Python 3.10 eller nyare. Alle kommandoane under blir køyrde frå rotmappa 
 
 ### 1. Lag eit virtuelt miljø og installer pakkane
 
-```bash
-py -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+```
+py -m venv .venv                   # Mac/Linux: python3 -m venv .venv
+.venv\Scripts\activate             # Mac/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+Når miljøet er aktivt, startar terminalen med `(.venv)`, og `python` fungerer på alle maskinar.
 
 ### 2. Kaggle-token (berre første gong)
 
@@ -37,7 +41,7 @@ Lag ikkje fila sjølv i PowerShell: då kan ho få feil teiknkoding, og Kaggle k
 ### 3. Last ned data
 
 **⚠️ Datasettet er om lag 14 GB.** Sidan det blir pakka ut etter nedlasting, bør du ha
-rundt dobbelt så mykje ledig plass
+rundt dobbelt så mykje ledig plass.
 
 ```
 python scripts/download_data.py
@@ -48,7 +52,7 @@ python scripts/download_data.py
 ```
 python src/prepare_crops.py --inspect
 python src/prepare_crops.py
-python src/train.py
+python src/train.py --feature-set simple --model "Gradient boosting (monoton)" --target-precision 0.9
 python app.py
 ```
 
@@ -56,42 +60,75 @@ python app.py
    Sjå at begge klassane er med før de går vidare.
 2. `prepare_crops.py` klipper ut kvart eple til `data/crops/`.
 3. `train.py` trenar, evaluerer og lagrar modellen i `models/` og resultata i `reports/`.
+   Flagga vel trekka, modellen og precision-kravet som den endelege modellen brukar (sjå _Metode_).
+   Utan flagga vel skriptet det som er best i kryssvalideringa, som ikkje er det same.
    Bruk `--quick` for ei raskare prøvekøyring.
 4. `app.py` startar nettsida. Opne lenkja som blir skriven ut.
+   Valfritt, til analyse og rapport:
 
-Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Ho trenar ingenting.
+```
+python src/robustness.py
+python src/check_labels.py
+```
+
+- `robustness.py` testar kor godt trekksetta toler endra lys og kamera, og lagar `reports/robustness.png`.
+- `check_labels.py` viser kor stor del av epla som er merkte modne, etter kor raude dei er, og lagar
+  `reports/label_check.png`.
+  Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Ho trenar ingenting.
 
 ## Struktur
 
-| Fil                         | Innhald                                                         |
-| --------------------------- | --------------------------------------------------------------- |
-| `scripts/download_data.sh`  | Lastar ned datasettet frå Kaggle                                |
-| `src/prepare_crops.py`      | Klipper ut kvart eple og lagar `metadata.csv`                   |
-| `src/features.py`           | Gjer eit eplebilete om til trekk (fargetrekk eller pikslar)     |
-| `src/dataset.py`            | Lastar utklipp og trekk, og lagar trenings-/testsplitten        |
-| `src/train.py`              | Samanlikning, hyperparametersøk, terskel, endeleg test, lagring |
-| `notebooks/explore.ipynb`   | Utforsking av data og visning av resultat og figurar            |
-| `app.py`                    | Gradio-nettside                                                 |
-| `models/apple_model.joblib` | Ferdig trena modell, brukt av nettsida                          |
-| `reports/`                  | Resultattabell, `metrics.json` og figurar til rapporten         |
+| Fil                         | Innhald                                                            |
+| --------------------------- | ------------------------------------------------------------------ |
+| `scripts/setup_kaggle.py`   | Lagrar Kaggle-tokenet rett (éin gong per maskin)                   |
+| `scripts/download_data.py`  | Lastar ned datasettet frå Kaggle                                   |
+| `src/prepare_crops.py`      | Klipper ut kvart eple og lagar `metadata.csv`                      |
+| `src/features.py`           | Gjer eit eplebilete om til trekk (fire trekksett, sjå _Metode_)    |
+| `src/dataset.py`            | Lastar utklipp og trekk, og lagar trenings-/testsplitten           |
+| `src/train.py`              | Samanlikning, hyperparametersøk, terskel, endeleg test, lagring    |
+| `src/robustness.py`         | Testar trekksetta på bilete med endra lys og fargar                |
+| `src/check_labels.py`       | Viser samanhengen mellom raudandel og etiketten «moden»            |
+| `notebooks/explore.ipynb`   | Utforsking av data og visning av resultat og figurar               |
+| `app.py`                    | Gradio-nettside: klikk på eple i eit tre-bilete for å få vurdering |
+| `models/apple_model.joblib` | Ferdig trena modell, brukt av nettsida                             |
+| `reports/`                  | Resultattabellar, `metrics.json` og figurar til rapporten          |
 
 ## Metode
 
 `train.py` følgjer same oppbygging som kursnotatbøkene (DAT158-1.3, 1.6, 2.4, 2.10):
 
-1. **Trekk.** Kvart eple blir til ein talvektor på to måtar: 30 handlaga fargetrekk, eller
-   bildet skalert ned til 16×16 piksel (som MNIST-dømet i DAT158-1.4).
-2. **Trenings-/testsplitt per foto** med `GroupShuffleSplit`. Eit foto inneheld mange eple med
-   same lys og bakgrunn, så eple frå same foto må aldri vere i både trening og test. Datasettet har
-   sin eigen train/val/test-inndeling, men der kan utsnitt (tiles) av same foto og same scene teken
-   frå ulik høgd hamne i ulike delar. Vi slår difor saman alle bileta og lagar vår eigen splitt.
+1. **Trekk.** Kvart eple blir til ein talvektor på fire måtar: 30 handlaga fargetrekk (`color`),
+   24 trekk som berre handlar om fargetone (`hue`), 6 samandragstrekk av fargetone utan histogram
+   (`simple`), eller bildet skalert ned til 16×16 piksel (`pixels`, som MNIST-dømet i DAT158-1.4).
+2. **Trenings-/testsplitt per foto** med `StratifiedGroupKFold`. Eit foto inneheld mange eple med
+   same lys og bakgrunn, så eple frå same foto må aldri vere i både trening og test. Stratifiseringa
+   gjer at trening og test får om lag same andel modne eple. Datasettet har sin eigen
+   train/val/test-inndeling, men der kan utsnitt (tiles) av same foto og same scene teken frå ulik
+   høgd hamne i ulike delar. Vi slår difor saman alle bileta og lagar vår eigen splitt.
 3. **Baseline** med `DummyClassifier`.
-4. **Samanlikning** av logistisk regresjon, `SGDClassifier`, random forest og SVC, med
-   `cross_val_score` og `GroupKFold`.
+4. **Samanlikning** av logistisk regresjon, `SGDClassifier`, random forest, SVC og
+   `HistGradientBoostingClassifier`, med `cross_val_score` og `StratifiedGroupKFold`. Berre ca. 14 %
+   av epla er modne, så modellane brukar `class_weight="balanced"`, og F1 for «moden» er hovudmålet
+   i staden for accuracy.
 5. **Hyperparametersøk** med `GridSearchCV`.
 6. **Val av terskel** med `precision_recall_curve`. For ein robot er det verre å plukke eit umodent
-   eple enn å la eit modent henge, så terskelen blir sett slik at precision for «moden» er minst 95 %.
-7. **Endeleg test**, ein gong, på det tilbakehaldne testsettet.
+   eple enn å la eit modent henge, så terskelen blir sett slik at precision for «moden» er minst 90 %.
+   95 % vart prøvd først, men då fann modellen berre om lag ein tredel av dei modne epla.
+7. **Endeleg test**, éin gong, på det tilbakehaldne testsettet.
+8. **Robustheit og monoton modell.** På bilete frå nettet var modellen usikker, sjølv på eple som
+   var nesten heilt raude. `check_labels.py` viste at eit typisk modent eple i datasettet berre er
+   ca. 40 % raudt, og at nesten ingen eple er over 80 % raude. Random forest kan ikkje ekstrapolere
+   til eple som er raudare enn treningsdataa. Den endelege modellen er difor
+   `HistGradientBoostingClassifier` med `monotonic_cst` på trekksettet `simple`: meir raudt gjer
+   aldri eplet mindre modent, og meir grønt gjer det aldri meir modent. Han er omtrent like god i
+   kryssvalideringa, men gir fornuftige svar òg for eple utanfor treningsdataa.
+
+## Nettsida
+
+Modellen er trena på utklipp der eitt eple fyller biletet. Nettsida lèt difor brukaren klikke på
+eple i eit bilete av eit epletre. Appen klipper ut eit kvadrat rundt klikket, viser utklippet
+(«Dette ser modellen»), og merkar eplet med raud ramme for moden og grøn for umoden. Ein glidebrytar
+styrer storleiken på utklippet; ruta bør dekkje eitt eple med litt blad rundt.
 
 ## Publisering
 
@@ -102,7 +139,8 @@ Treninga blir ikkje køyrd ved publisering, så hugs å committe den endelege mo
 
 - Berre éin sort (Fuji). Raud = moden passar ikkje for grøne sortar.
 - Etikettane byggjer på farge og fotodato, ikkje målt modning.
-- Nettsida tek eitt eple per bilete. Å finne alle epla i eit tre-bilete er neste steg.
+- Brukaren må sjølv klikke på epla og stille inn storleiken. Å finne epla automatisk krev ein
+  objektdetektor (djuplæring), som er neste steg mot ein plukkerobot.
 
 ## Kjelder
 

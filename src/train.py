@@ -27,7 +27,7 @@ from PIL import Image
 from sklearn.base import clone
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.metrics import (ConfusionMatrixDisplay, classification_report,
                              precision_recall_curve)
@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dataset import DATA, RANDOM_STATE, ROOT, group_split, labels_and_groups, load_features, load_meta  # noqa: E402
 
 CLASS_NAMES = ["umoden", "moden"]
-FEATURE_SETS = ["color", "pixels"]
+FEATURE_SETS = ["color", "hue", "simple", "pixels"]
 
 
 # Berre ca. 14 % av epla er modne. class_weight="balanced" gjer at kvart modent eple
@@ -48,7 +48,23 @@ FEATURE_SETS = ["color", "pixels"]
 BALANCED = "balanced"
 
 
-def candidate_models():
+# Domenekunnskap: meir raudt skal aldri gjere eit eple MINDRE modent, og meir grønt
+# skal aldri gjere det MEIR modent. Datasettet har nesten ingen heilt raude eple
+# (median raudandel for modne er ca. 40 %), så utan denne regelen veit ikkje
+# modellen kva han skal gjere med eit eple som er raudare enn alt han har sett.
+MONOTONIC = {"red_fraction": 1, "red_minus_green": 1, "r_minus_g": 1, "chroma_r": 1,
+             "green_fraction": -1, "chroma_g": -1}
+HGB_NAME = "Gradient boosting (monoton)"
+
+
+def monotonic_hgb(columns, **params):
+    """HistGradientBoostingClassifier med monotone avgrensingar på fargetrekka som finst."""
+    cst = [MONOTONIC.get(c, 0) for c in columns]
+    return HistGradientBoostingClassifier(monotonic_cst=cst, class_weight=BALANCED,
+                                          random_state=RANDOM_STATE, **params)
+
+
+def candidate_models(columns):
     return {
         "Logistisk regresjon": make_pipeline(StandardScaler(),
                                              LogisticRegression(max_iter=2000, class_weight=BALANCED)),
@@ -57,20 +73,24 @@ def candidate_models():
         "Random forest": RandomForestClassifier(n_estimators=200, class_weight=BALANCED,
                                                 n_jobs=-1, random_state=RANDOM_STATE),
         "SVC (RBF)": make_pipeline(StandardScaler(), SVC(class_weight=BALANCED)),
+        HGB_NAME: monotonic_hgb(columns),
     }
 
 
-def search_spaces(quick: bool):
+def search_spaces(quick: bool, columns):
     if quick:
         rf = {"n_estimators": [100], "max_depth": [None, 10]}
         svc = {"svc__C": [1], "svc__gamma": ["scale"]}
+        hgb = {"learning_rate": [0.1], "max_leaf_nodes": [31]}
     else:
         rf = {"n_estimators": [100, 300], "max_depth": [None, 10, 20], "min_samples_leaf": [1, 5]}
         svc = {"svc__C": [0.1, 1, 10], "svc__gamma": ["scale", 0.01, 0.1]}
+        hgb = {"learning_rate": [0.05, 0.1], "max_leaf_nodes": [15, 31, 63], "l2_regularization": [0, 1]}
     return {
         "Random forest": (RandomForestClassifier(class_weight=BALANCED, n_jobs=-1,
                                                  random_state=RANDOM_STATE), rf),
         "SVC (RBF)": (make_pipeline(StandardScaler(), SVC(class_weight=BALANCED)), svc),
+        HGB_NAME: (monotonic_hgb(columns), hgb),
     }
 
 
@@ -86,6 +106,11 @@ def main():
     ap.add_argument("--target-precision", type=float, default=0.95,
                     help="Minste precision for «moden» når terskelen blir vald")
     ap.add_argument("--folds", type=int, default=5)
+    ap.add_argument("--model", choices=["Random forest", "SVC (RBF)", HGB_NAME], default=None,
+                    help="Tving fram ein modell etter hyperparametersøket. Standard: best kryssvalidert F1")
+    ap.add_argument("--feature-set", choices=FEATURE_SETS, default=None,
+                    help="Tving fram eit trekksett (t.d. hue, som toler anna lys og kamera betre; "
+                         "sjå src/robustness.py). Standard: det med best kryssvalidert F1")
     ap.add_argument("--quick", action="store_true")
     args = ap.parse_args()
     args.reports.mkdir(parents=True, exist_ok=True)
@@ -118,26 +143,32 @@ def main():
              "f1_mean": dummy.mean(), "f1_std": dummy.std()}]
     for fs in FEATURE_SETS:
         X_train = X_all[fs].iloc[train_idx]
-        for name, model in candidate_models().items():
+        for name, model in candidate_models(X_train.columns).items():
             s = cross_val_score(model, X_train, y_train, groups=g_train, cv=cv, scoring="f1", n_jobs=-1)
             rows.append({"trekk": fs, "modell": name, "f1_mean": s.mean(), "f1_std": s.std()})
             print(f"  {fs:7s} {name:22s} {s.mean():.3f} ± {s.std():.3f}")
     comparison = pd.DataFrame(rows)
     comparison.to_csv(args.reports / "model_comparison.csv", index=False)
 
-    best_fs = comparison[comparison["trekk"] != "-"].groupby("trekk")["f1_mean"].max().idxmax()
+    best_cv_fs = comparison[comparison["trekk"] != "-"].groupby("trekk")["f1_mean"].max().idxmax()
+    best_fs = args.feature_set or best_cv_fs
     X_train, X_test = X_all[best_fs].iloc[train_idx], X_all[best_fs].iloc[test_idx]
-    print(f"\nBeste trekksett: {best_fs}")
+    print(f"\nBeste trekksett i kryssvalidering: {best_cv_fs}")
+    if args.feature_set:
+        print(f"Brukar trekksettet «{best_fs}» (valt med --feature-set)")
 
     # --------------------------------------------------- hyperparametersøk
     section("Hyperparametersøk (GridSearchCV)")
     grids = {}
-    for name, (estimator, params) in search_spaces(args.quick).items():
+    for name, (estimator, params) in search_spaces(args.quick, X_train.columns).items():
         grid = GridSearchCV(estimator, params, cv=cv, scoring="f1", n_jobs=-1)
         grid.fit(X_train, y_train, groups=g_train)
         grids[name] = grid
         print(f"  {name:15s} F1 = {grid.best_score_:.3f}  {grid.best_params_}")
-    best_name = max(grids, key=lambda n: grids[n].best_score_)
+    best_cv_name = max(grids, key=lambda n: grids[n].best_score_)
+    best_name = args.model or best_cv_name
+    if args.model:
+        print(f"Beste i kryssvalidering: {best_cv_name}. Brukar «{best_name}» (valt med --model)")
     print(f"\nVald modell: {best_name}")
 
     final_model = clone(grids[best_name].best_estimator_)
