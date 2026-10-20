@@ -17,7 +17,7 @@ RANDOM_STATE = 42
 def load_meta(data_dir: Path = DATA) -> pd.DataFrame:
     path = data_dir / "metadata.csv"
     if not path.exists():
-        raise SystemExit(f"Fann ikkje {path}. Køyr scripts/download_data.sh og "
+        raise SystemExit(f"Fann ikkje {path}. Køyr scripts/download_data.py og "
                          "src/prepare_crops.py først (sjå README).")
     return pd.read_csv(path)
 

@@ -1,5 +1,5 @@
 # Rådata, utklipp og trekk-cache blir ikkje lagt i repoet (lisens + storleik).
-# Last ned med scripts/download_data.sh
+# Last ned med python scripts/download_data.py
 data/
 __pycache__/
 *.pyc
