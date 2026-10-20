@@ -82,7 +82,9 @@ Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Ho trenar inge
 1. **Trekk.** Kvart eple blir til ein talvektor på to måtar: 30 handlaga fargetrekk, eller
    bildet skalert ned til 16×16 piksel (som MNIST-dømet i DAT158-1.4).
 2. **Trenings-/testsplitt per foto** med `GroupShuffleSplit`. Eit foto inneheld mange eple med
-   same lys og bakgrunn, så eple frå same foto må aldri vere i både trening og test.
+   same lys og bakgrunn, så eple frå same foto må aldri vere i både trening og test. Datasettet har
+   sin eigen train/val/test-inndeling, men der kan utsnitt (tiles) av same foto og same scene teken
+   frå ulik høgd hamne i ulike delar. Vi slår difor saman alle bileta og lagar vår eigen splitt.
 3. **Baseline** med `DummyClassifier`.
 4. **Samanlikning** av logistisk regresjon, `SGDClassifier`, random forest og SVC, med
    `cross_val_score` og `GroupKFold`.
@@ -106,6 +108,7 @@ Treninga blir ikkje køyrd ved publisering, så hugs å committe den endelege mo
 
 - **Datasett:** Zhu, K. et al. (2025). _Foundation Model-Based Apple Ripeness and Size Estimation
   for Selective Harvesting._ arXiv:2502.01850. Data: https://www.kaggle.com/datasets/zhukeyi1/fuji-ripeness-and-size-dataset
+  (lisens på Kaggle: GPL-3.0). 4027 bilete i VIA-format, med boksar og etiketten `Ripeness` per eple.
 - Datasettet byggjer på mellom anna PFuji-Size (Gené-Mola et al., 2021, CC BY 4.0, berre forsking
   og undervisning) og OpenAccess RGBD Apple (GPL-3.0). Rådata er difor ikkje lagt i dette repoet.
 - Pedregosa, F. et al. (2011). _Scikit-learn: Machine Learning in Python._ JMLR 12.
