@@ -1,0 +1,69 @@
+{
+  "feature_set": "color",
+  "model": "Random forest",
+  "best_params": {
+    "max_depth": null,
+    "min_samples_leaf": 1,
+    "n_estimators": 300
+  },
+  "cv_f1": 0.7671472332212261,
+  "threshold": 0.8,
+  "threshold_rule": "lågaste terskel med precision ≥ 0.9",
+  "target_precision": 0.9,
+  "n_train": 14651,
+  "n_test": 3666,
+  "test_at_0.5": {
+    "umoden": {
+      "precision": 0.9665594855305466,
+      "recall": 0.9542857142857143,
+      "f1-score": 0.9603833865814696,
+      "support": 3150.0
+    },
+    "moden": {
+      "precision": 0.7410071942446043,
+      "recall": 0.7984496124031008,
+      "f1-score": 0.7686567164179104,
+      "support": 516.0
+    },
+    "accuracy": 0.9323513366066557,
+    "macro avg": {
+      "precision": 0.8537833398875754,
+      "recall": 0.8763676633444075,
+      "f1-score": 0.86452005149969,
+      "support": 3666.0
+    },
+    "weighted avg": {
+      "precision": 0.9348123545148493,
+      "recall": 0.9323513366066557,
+      "f1-score": 0.9333973086206413,
+      "support": 3666.0
+    }
+  },
+  "test_at_threshold": {
+    "umoden": {
+      "precision": 0.9237363287023352,
+      "recall": 0.9920634920634921,
+      "f1-score": 0.9566814633399663,
+      "support": 3150.0
+    },
+    "moden": {
+      "precision": 0.911660777385159,
+      "recall": 0.5,
+      "f1-score": 0.6458072590738423,
+      "support": 516.0
+    },
+    "accuracy": 0.9228041462084016,
+    "macro avg": {
+      "precision": 0.9176985530437471,
+      "recall": 0.746031746031746,
+      "f1-score": 0.8012443612069042,
+      "support": 3666.0
+    },
+    "weighted avg": {
+      "precision": 0.9220366602681664,
+      "recall": 0.9228041462084016,
+      "f1-score": 0.9129250286969439,
+      "support": 3666.0
+    }
+  }
+}
