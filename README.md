@@ -63,18 +63,12 @@ Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Den trenar ing
 5. **Hyperparametersøk** med `GridSearchCV`.
 6. **Val av terskel** med `precision_recall_curve`. For ein robot er det verre å plukke eit umodent
    eple enn å la eit modent henge, så terskelen blir sett slik at precision for «moden» er minst 95 %.
-7. **Endeleg test**, éin gong, på det tilbakehaldne testsettet.
+7. **Endeleg test**, ein gong, på det tilbakehaldne testsettet.
 
 ## Publisering
 
 Nettsida treng berre `app.py`, `src/features.py`, `models/apple_model.joblib` og `requirements.txt`.
 Treninga blir ikkje køyrd ved publisering, så hugs å committe den endelege modellen.
-
-## Samarbeid
-
-- Kvar person jobbar på sin eigen branch og lagar pull request til `main`.
-- Tøm output i notatboka før commit, så blir det færre konfliktar.
-- `data/` er ikkje i Git; kvar person lastar ned sjølv med `scripts/download_data.sh`.
 
 ## Avgrensingar
 
@@ -88,7 +82,6 @@ Treninga blir ikkje køyrd ved publisering, så hugs å committe den endelege mo
   for Selective Harvesting._ arXiv:2502.01850. Data: https://www.kaggle.com/datasets/zhukeyi1/fuji-ripeness-and-size-dataset
 - Datasettet byggjer på mellom anna PFuji-Size (Gené-Mola et al., 2021, CC BY 4.0, berre forsking
   og undervisning) og OpenAccess RGBD Apple (GPL-3.0). Rådata er difor ikkje lagt i dette repoet.
-- Kursmateriell DAT158, HVL: https://github.com/HVL-ML/DAT158
 - Pedregosa, F. et al. (2011). _Scikit-learn: Machine Learning in Python._ JMLR 12.
 
 ## Bruk av AI-verktøy
