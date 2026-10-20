@@ -36,6 +36,9 @@ Lag ikkje fila sjølv i PowerShell: då kan ho få feil teiknkoding, og Kaggle k
 
 ### 3. Last ned data
 
+**⚠️ Datasettet er om lag 14 GB.** Sidan det blir pakka ut etter nedlasting, bør du ha
+rundt dobbelt så mykje ledig plass
+
 ```
 python scripts/download_data.py
 ```
