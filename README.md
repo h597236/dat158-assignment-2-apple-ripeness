@@ -1,176 +1,165 @@
-# Er eplet klart for plukking?
-
-ML-basert nettside som vurderer om eit eple er modent nok til å plukkast, ut frå eit bilete.
-Sluttprosjekt i DAT158. Tenkt som første steg mot persepsjon for ein epleplukkarrobot.
-
-**🍎 Prøv nettsida: https://dat158-assignment-2-apple-ripeness.onrender.com/** (første lasting kan ta om lag eitt minutt)
-
-**Definisjon:** Eit eple reknast som _moden_ når eplet er raudt.
-Dette er ein proxy, ikkje ei måling av stivelse, fastleik eller sukker – sjå _Avgrensingar_.
-
-Alt er bygd med verktøya frå kurset: scikit-learn, pandas, matplotlib, Jupyter og Gradio.
-
-## Oppsett
-
-Krev Python 3.10 eller nyare. Alle kommandoane under blir køyrde frå rotmappa i repoet,
-éin linje om gongen.
-
-### 1. Lag eit virtuelt miljø og installer pakkane
-
+# Is the apple ready to pick?
+ 
+ML-based website that judges whether an apple is ripe enough to pick, from a photo.
+Final project in DAT158. Intended as a first step towards perception for an apple-picking robot.
+ 
+**🍎 Try the website: https://dat158-assignment-2-apple-ripeness.onrender.com/** (the first load can take about a minute)
+ 
+**Definition:** An apple counts as _ripe_ when it is red.
+This is a proxy, not a measurement of starch, firmness or sugar – see _Limitations_.
+ 
+Everything is built with the tools from the course: scikit-learn, pandas, matplotlib, Jupyter and Gradio.
+ 
+## Setup
+ 
+Requires Python 3.10 or newer. All commands below are run from the root folder of the repo,
+one line at a time.
+ 
+### 1. Create a virtual environment and install the packages
+ 
 ```
 py -m venv .venv                   # Mac/Linux: python3 -m venv .venv
 .venv\Scripts\activate             # Mac/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 ```
-
-Når miljøet er aktivt, startar terminalen med `(.venv)`, og `python` fungerer på alle maskinar.
-
-### 2. Kaggle-token (berre første gong)
-
-1. Logg inn på [kaggle.com/settings](https://www.kaggle.com/settings) → **API Tokens** → **Generate New Token**.
-2. Kopier tokenet.
-3. Køyr skriptet under og lim inn tokenet når du blir spurd. Det blir ikkje vist når du limer inn.
-
+ 
+When the environment is active, the terminal prompt starts with `(.venv)`, and `python` works on every machine.
+ 
+### 2. Kaggle token (first time only)
+ 
+1. Log in at [kaggle.com/settings](https://www.kaggle.com/settings) → **API Tokens** → **Generate New Token**.
+2. Copy the token.
+3. Run the script below and paste the token when asked. It is not shown while you paste.
 ```
 python scripts/setup_kaggle.py
 ```
-
-Tokenet blir lagra i `.kaggle`-mappa i heimemappa di, utanfor repoet. Kvar person treng sitt eige.
-Lag ikkje fila sjølv i PowerShell: då kan ho få feil teiknkoding, og Kaggle klarer ikkje lese ho.
-
-### 3. Last ned data
-
-**⚠️ Datasettet er om lag 14 GB.** Sidan det blir pakka ut etter nedlasting, bør du ha
-rundt dobbelt så mykje ledig plass.
-
+ 
+The token is saved in the `.kaggle` folder in your home folder, outside the repo. Each person needs their own.
+Don't create the file yourself in PowerShell: it may get the wrong text encoding, and Kaggle can't read it.
+ 
+### 3. Download the data
+ 
+**⚠️ The dataset is about 14 GB.** Since it is unzipped after downloading, you should have
+roughly twice as much free space.
+ 
 ```
 python scripts/download_data.py
 ```
-
-## Køyring
-
+ 
+## Running
+ 
 ```
 python src/prepare_crops.py --inspect
 python src/prepare_crops.py
 python src/train.py --feature-set simple --model "Gradient boosting (monoton)" --target-precision 0.9
 python app.py
 ```
-
-1. `--inspect` viser kor mange eple som vart funne og fordelinga mellom `ripe` og `unripe`, utan å lagre noko.
-   Sjå at begge klassane er med før de går vidare.
-2. `prepare_crops.py` klipper ut kvart eple til `data/crops/`.
-3. `train.py` trenar, evaluerer og lagrar modellen i `models/` og resultata i `reports/`.
-   Flagga vel trekka, modellen og precision-kravet som den endelege modellen brukar (sjå _Metode_).
-   Utan flagga vel skriptet det som er best i kryssvalideringa, som ikkje er det same.
-   Bruk `--quick` for ei raskare prøvekøyring.
-4. `app.py` startar nettsida. Opne lenkja som blir skriven ut.
-   Valfritt, til analyse og rapport:
-
+ 
+1. `--inspect` shows how many apples were found and the split between `ripe` and `unripe`, without saving anything.
+   Check that both classes are present before continuing.
+2. `prepare_crops.py` cuts out each apple into `data/crops/`.
+3. `train.py` trains, evaluates and saves the model in `models/` and the results in `reports/`.
+   The flags select the features, model and precision target used by the final model (see _Method_).
+   Without the flags, the script picks whatever is best in cross-validation, which is not the same.
+   Use `--quick` for a faster test run.
+4. `app.py` starts the website. Open the link it prints.
+Optional, for analysis and the report:
+ 
 ```
 python src/robustness.py
 python src/check_labels.py
 ```
-
-- `robustness.py` testar kor godt trekksetta toler endra lys og kamera, og lagar `reports/robustness.png`.
-- `check_labels.py` viser kor stor del av epla som er merkte modne, etter kor raude dei er, og lagar
+ 
+- `robustness.py` tests how well the feature sets handle changed lighting and cameras, and creates `reports/robustness.png`.
+- `check_labels.py` shows what share of the apples are labelled ripe, depending on how red they are, and creates
   `reports/label_check.png`.
-  Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Ho trenar ingenting.
-
-
-## Publisering
-
-Nettsida køyrer på Render (gratisnivået): **https://dat158-assignment-2-apple-ripeness.onrender.com/**
-
-Render hentar koden frå `main` på GitHub og publiserer på nytt ved kvar push.
-Gratisnivået går i dvale etter 15 minutt utan besøk, så første lasting kan ta om lag eitt minutt.
-
-Nettsida treng berre `app.py`, `src/features.py`, `models/apple_model.joblib` og `requirements.txt`.
-Treninga blir ikkje køyrd ved publisering, så:
-
-- Den trena modellen må committast. Trenar de på nytt, må den nye `apple_model.joblib` committast.
-- `scikit-learn` er låst til same versjon som modellen vart trena med i `requirements.txt`.
-  Ein lagra modell kan ikkje alltid lastast med ein annan versjon.
-- `.python-version` set Python-versjonen på Render til den same som lokalt.
-
-Oppsett på Render: *New → Web Service*, vel repoet, *Build Command* `pip install -r requirements.txt`,
+To look at the data and results, open `notebooks/explore.ipynb`. It doesn't train anything.
+ 
+## Deployment
+ 
+The website runs on Render (free tier): **https://dat158-assignment-2-apple-ripeness.onrender.com/**
+ 
+Render pulls the code from `main` on GitHub and redeploys on every push.
+The free tier goes to sleep after 15 minutes without visitors, so the first load can take about a minute.
+ 
+The website only needs `app.py`, `src/features.py`, `models/apple_model.joblib` and `requirements.txt`.
+Training is not run during deployment, so:
+ 
+- The trained model must be committed. If you retrain, the new `apple_model.joblib` must be committed.
+- `scikit-learn` is pinned in `requirements.txt` to the same version the model was trained with.
+  A saved model can't always be loaded with a different version.
+- `.python-version` sets the Python version on Render to the same one used locally.
+Setup on Render: *New → Web Service*, choose the repo, *Build Command* `pip install -r requirements.txt`,
 *Start Command* `python app.py`, *Instance Type* Free.
-
-## Struktur
-
-| Fil                         | Innhald                                                            |
-| --------------------------- | ------------------------------------------------------------------ |
-| `scripts/setup_kaggle.py`   | Lagrar Kaggle-tokenet rett (éin gong per maskin)                   |
-| `scripts/download_data.py`  | Lastar ned datasettet frå Kaggle                                   |
-| `src/prepare_crops.py`      | Klipper ut kvart eple og lagar `metadata.csv`                      |
-| `src/features.py`           | Gjer eit eplebilete om til trekk (fire trekksett, sjå _Metode_)    |
-| `src/dataset.py`            | Lastar utklipp og trekk, og lagar trenings-/testsplitten           |
-| `src/train.py`              | Samanlikning, hyperparametersøk, terskel, endeleg test, lagring    |
-| `src/robustness.py`         | Testar trekksetta på bilete med endra lys og fargar                |
-| `src/check_labels.py`       | Viser samanhengen mellom raudandel og etiketten «moden»            |
-| `notebooks/explore.ipynb`   | Utforsking av data og visning av resultat og figurar               |
-| `app.py`                    | Gradio-nettside: klikk på eple i eit tre-bilete for å få vurdering |
-| `models/apple_model.joblib` | Ferdig trena modell, brukt av nettsida                             |
-| `reports/`                  | Resultattabellar, `metrics.json` og figurar til rapporten          |
-| `.python-version`           | Python-versjonen Render skal bruke                                 |
-
-## Metode
-
-`train.py` følgjer same oppbygging som kursnotatbøkene (DAT158-1.3, 1.6, 2.4, 2.10):
-
-1. **Trekk.** Kvart eple blir til ein talvektor på fire måtar: 30 handlaga fargetrekk (`color`),
-   24 trekk som berre handlar om fargetone (`hue`), 6 samandragstrekk av fargetone utan histogram
-   (`simple`), eller bildet skalert ned til 16×16 piksel (`pixels`, som MNIST-dømet i DAT158-1.4).
-2. **Trenings-/testsplitt per foto** med `StratifiedGroupKFold`. Eit foto inneheld mange eple med
-   same lys og bakgrunn, så eple frå same foto må aldri vere i både trening og test. Stratifiseringa
-   gjer at trening og test får om lag same andel modne eple. Datasettet har sin eigen
-   train/val/test-inndeling, men der kan utsnitt (tiles) av same foto og same scene teken frå ulik
-   høgd hamne i ulike delar. Vi slår difor saman alle bileta og lagar vår eigen splitt.
-3. **Baseline** med `DummyClassifier`.
-4. **Samanlikning** av logistisk regresjon, `SGDClassifier`, random forest, SVC og
-   `HistGradientBoostingClassifier`, med `cross_val_score` og `StratifiedGroupKFold`. Berre ca. 14 %
-   av epla er modne, så modellane brukar `class_weight="balanced"`, og F1 for «moden» er hovudmålet
-   i staden for accuracy.
-5. **Hyperparametersøk** med `GridSearchCV`.
-6. **Val av terskel** med `precision_recall_curve`. For ein robot er det verre å plukke eit umodent
-   eple enn å la eit modent henge, så terskelen blir sett slik at precision for «moden» er minst 90 %.
-   95 % vart prøvd først, men då fann modellen berre om lag ein tredel av dei modne epla.
-7. **Endeleg test**, éin gong, på det tilbakehaldne testsettet.
-8. **Robustheit og monoton modell.** På bilete frå nettet var modellen usikker, sjølv på eple som
-   var nesten heilt raude. `check_labels.py` viste at eit typisk modent eple i datasettet berre er
-   ca. 40 % raudt, og at nesten ingen eple er over 80 % raude. Random forest kan ikkje ekstrapolere
-   til eple som er raudare enn treningsdataa. Den endelege modellen er difor
-   `HistGradientBoostingClassifier` med `monotonic_cst` på trekksettet `simple`: meir raudt gjer
-   aldri eplet mindre modent, og meir grønt gjer det aldri meir modent. Han er omtrent like god i
-   kryssvalideringa, men gir fornuftige svar òg for eple utanfor treningsdataa.
-
-## Nettsida
-
-Modellen er trena på utklipp der eitt eple fyller biletet. Nettsida lèt difor brukaren klikke på
-eple i eit bilete av eit epletre. Appen klipper ut eit kvadrat rundt klikket, viser utklippet
-(«Dette ser modellen»), og merkar eplet med raud ramme for moden og grøn for umoden. Ein glidebrytar
-styrer storleiken på utklippet; ruta bør dekkje eitt eple med litt blad rundt.
-
-## Publisering
-
-Nettsida treng berre `app.py`, `src/features.py`, `models/apple_model.joblib` og `requirements.txt`.
-Treninga blir ikkje køyrd ved publisering, så hugs å committe den endelege modellen.
-
-## Avgrensingar
-
-- Berre éin sort (Fuji). Raud = moden passar ikkje for grøne sortar.
-- Etikettane byggjer på farge og fotodato, ikkje målt modning.
-- Brukaren må sjølv klikke på epla og stille inn storleiken. Å finne epla automatisk krev ein
-  objektdetektor (djuplæring), som er neste steg mot ein plukkerobot.
-
-## Kjelder
-
-- **Datasett:** Zhu, K. et al. (2025). _Foundation Model-Based Apple Ripeness and Size Estimation
+ 
+## Structure
+ 
+| File                        | Contents                                                              |
+| --------------------------- | --------------------------------------------------------------------- |
+| `scripts/setup_kaggle.py`   | Saves the Kaggle token correctly (once per machine)                   |
+| `scripts/download_data.py`  | Downloads the dataset from Kaggle                                     |
+| `src/prepare_crops.py`      | Cuts out each apple and creates `metadata.csv`                        |
+| `src/features.py`           | Turns an apple image into features (four feature sets, see _Method_)  |
+| `src/dataset.py`            | Loads crops and features, and makes the train/test split              |
+| `src/train.py`              | Comparison, hyperparameter search, threshold, final test, saving      |
+| `src/robustness.py`         | Tests the feature sets on images with changed lighting and colours    |
+| `src/check_labels.py`       | Shows the relationship between redness and the label "ripe"           |
+| `notebooks/explore.ipynb`   | Data exploration and display of results and figures                   |
+| `app.py`                    | Gradio website: click on apples in a tree photo to get an assessment  |
+| `models/apple_model.joblib` | Trained model, used by the website                                    |
+| `reports/`                  | Result tables, `metrics.json` and figures for the report              |
+| `.python-version`           | The Python version Render should use                                  |
+ 
+## Method
+ 
+`train.py` follows the same structure as the course notebooks (DAT158-1.3, 1.6, 2.4, 2.10):
+ 
+1. **Features.** Each apple is turned into a vector of numbers in one of four ways: 30 hand-crafted colour
+   features (`color`), 24 features describing only hue (`hue`), 6 summary hue features without the histogram
+   (`simple`), or the image scaled down to 16×16 pixels (`pixels`, like the MNIST example in DAT158-1.4).
+2. **Train/test split per photo** with `StratifiedGroupKFold`. A photo contains many apples with the
+   same lighting and background, so apples from the same photo must never be in both training and test.
+   Stratification gives training and test roughly the same share of ripe apples. The dataset has its own
+   train/val/test split, but there, crops (tiles) of the same photo, and the same scene taken from different
+   heights, can end up in different parts. We therefore combine all images and make our own split.
+3. **Baseline** with `DummyClassifier`.
+4. **Comparison** of logistic regression, `SGDClassifier`, random forest, SVC and
+   `HistGradientBoostingClassifier`, with `cross_val_score` and `StratifiedGroupKFold`. Only about 14 %
+   of the apples are ripe, so the models use `class_weight="balanced"`, and F1 for "ripe" is the main
+   metric instead of accuracy.
+5. **Hyperparameter search** with `GridSearchCV`.
+6. **Threshold selection** with `precision_recall_curve`. For a robot, picking an unripe apple is worse
+   than leaving a ripe one on the tree, so the threshold is set so that precision for "ripe" is at least 90 %.
+   95 % was tried first, but then the model found only about a third of the ripe apples.
+7. **Final test**, once, on the held-out test set.
+8. **Robustness and monotonic model.** On images from the internet, the model was uncertain even about
+   apples that were almost entirely red. `check_labels.py` showed that a typical ripe apple in the dataset
+   is only about 40 % red, and that almost no apples are more than 80 % red. Random forest cannot
+   extrapolate to apples that are redder than the training data. The final model is therefore
+   `HistGradientBoostingClassifier` with `monotonic_cst` on the `simple` feature set: more red never makes
+   an apple less ripe, and more green never makes it more ripe. It performs about as well in
+   cross-validation, but also gives sensible answers for apples outside the training data.
+## The website
+ 
+The model is trained on crops where a single apple fills the image. The website therefore lets the user
+click on apples in a photo of an apple tree. The app cuts out a square around the click, shows the crop
+("What the model sees"), and marks the apple with a red frame for ripe and green for unripe. A slider
+controls the size of the crop; the box should cover one apple with a little foliage around it.
+ 
+## Limitations
+ 
+- Only one variety (Fuji). Red = ripe does not apply to green varieties.
+- The labels are based on colour and photo date, not measured ripeness.
+- The user has to click on the apples and set the size themselves. Finding the apples automatically
+  requires an object detector (deep learning), which is the next step towards a picking robot.
+## Sources
+ 
+- **Dataset:** Zhu, K. et al. (2025). _Foundation Model-Based Apple Ripeness and Size Estimation
   for Selective Harvesting._ arXiv:2502.01850. Data: https://www.kaggle.com/datasets/zhukeyi1/fuji-ripeness-and-size-dataset
-  (lisens på Kaggle: GPL-3.0). 4027 bilete i VIA-format, med boksar og etiketten `Ripeness` per eple.
-- Datasettet byggjer på mellom anna PFuji-Size (Gené-Mola et al., 2021, CC BY 4.0, berre forsking
-  og undervisning) og OpenAccess RGBD Apple (GPL-3.0). Rådata er difor ikkje lagt i dette repoet.
+  (licence on Kaggle: GPL-3.0). 4027 images in VIA format, with boxes and a `Ripeness` label per apple.
+- The dataset builds on, among others, PFuji-Size (Gené-Mola et al., 2021, CC BY 4.0, research and
+  teaching only) and OpenAccess RGBD Apple (GPL-3.0). The raw data is therefore not included in this repo.
 - Pedregosa, F. et al. (2011). _Scikit-learn: Machine Learning in Python._ JMLR 12.
-
-## Bruk av AI-verktøy
-
-Claude (Anthropic) vart brukt til å kartleggje tilgjengelege datasett, og for deployment av nettsida då vi ikkje var kjent med gradle og render.
+## Use of AI tools
+ 
+Claude (Anthropic) was used to survey available datasets, and for deploying the website, as we were not familiar with Gradio and Render, we also wrote the readme in Norwegian initially and used AI to translate it to English.
