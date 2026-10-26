@@ -7,6 +7,7 @@ først finne eplet, så vurdere om det er modent.
 
     python app.py
 """
+import os
 import sys
 from pathlib import Path
 
@@ -178,4 +179,9 @@ with gr.Blocks(title="Er eplet klart for plukking?") as demo:
     whole_btn.click(on_whole, inputs=[original, marks], outputs=outputs)
 
 if __name__ == "__main__":
-    demo.launch()
+    # Lokalt: http://127.0.0.1:7860. På Render (og andre vertar) blir PORT sett av
+    # plattforma, og appen må lytte på 0.0.0.0 for å vere tilgjengeleg utanfrå.
+    if "PORT" in os.environ:
+        demo.launch(server_name="0.0.0.0", server_port=int(os.environ["PORT"]))
+    else:
+        demo.launch()
