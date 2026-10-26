@@ -3,7 +3,7 @@
 ML-basert nettside som vurderer om eit eple er modent nok til å plukkast, ut frå eit bilete.
 Sluttprosjekt i DAT158. Tenkt som første steg mot persepsjon for ein epleplukkarrobot.
 
-**🍎 Prøv nettsida: [https://dat158-assignment-2-apple-ripeness.onrender.com/]** (første lasting kan ta om lag eitt minutt)
+**🍎 Prøv nettsida: https://dat158-assignment-2-apple-ripeness.onrender.com/** (første lasting kan ta om lag eitt minutt)
 
 **Definisjon:** Eit eple reknast som _moden_ når eplet er raudt.
 Dette er ein proxy, ikkje ei måling av stivelse, fastleik eller sukker – sjå _Avgrensingar_.
@@ -79,7 +79,7 @@ python src/check_labels.py
 
 ## Publisering
 
-Nettsida køyrer på Render (gratisnivået): **[https://dat158-assignment-2-apple-ripeness.onrender.com/]**
+Nettsida køyrer på Render (gratisnivået): **https://dat158-assignment-2-apple-ripeness.onrender.com/**
 
 Render hentar koden frå `main` på GitHub og publiserer på nytt ved kvar push.
 Gratisnivået går i dvale etter 15 minutt utan besøk, så første lasting kan ta om lag eitt minutt.
