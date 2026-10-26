@@ -111,6 +111,7 @@ Oppsett på Render: *New → Web Service*, vel repoet, *Build Command* `pip inst
 | `app.py`                    | Gradio-nettside: klikk på eple i eit tre-bilete for å få vurdering |
 | `models/apple_model.joblib` | Ferdig trena modell, brukt av nettsida                             |
 | `reports/`                  | Resultattabellar, `metrics.json` og figurar til rapporten          |
+| `.python-version`           | Python-versjonen Render skal bruke                                 |
 
 ## Metode
 
