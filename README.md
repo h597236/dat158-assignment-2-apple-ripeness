@@ -1,9 +1,9 @@
-Readme utan kjelder · MD
-
 # Er eplet klart for plukking?
 
 ML-basert nettside som vurderer om eit eple er modent nok til å plukkast, ut frå eit bilete.
 Sluttprosjekt i DAT158. Tenkt som første steg mot persepsjon for ein epleplukkarrobot.
+
+**🍎 Prøv nettsida: [https://dat158-assignment-2-apple-ripeness.onrender.com/]** (første lasting kan ta om lag eitt minutt)
 
 **Definisjon:** Eit eple reknast som _moden_ når eplet er raudt.
 Dette er ein proxy, ikkje ei måling av stivelse, fastleik eller sukker – sjå _Avgrensingar_.
@@ -75,6 +75,25 @@ python src/check_labels.py
 - `check_labels.py` viser kor stor del av epla som er merkte modne, etter kor raude dei er, og lagar
   `reports/label_check.png`.
   Vil de sjå på data og resultat, opne `notebooks/explore.ipynb`. Ho trenar ingenting.
+
+
+## Publisering
+
+Nettsida køyrer på Render (gratisnivået): **[https://dat158-assignment-2-apple-ripeness.onrender.com/]**
+
+Render hentar koden frå `main` på GitHub og publiserer på nytt ved kvar push.
+Gratisnivået går i dvale etter 15 minutt utan besøk, så første lasting kan ta om lag eitt minutt.
+
+Nettsida treng berre `app.py`, `src/features.py`, `models/apple_model.joblib` og `requirements.txt`.
+Treninga blir ikkje køyrd ved publisering, så:
+
+- Den trena modellen må committast. Trenar de på nytt, må den nye `apple_model.joblib` committast.
+- `scikit-learn` er låst til same versjon som modellen vart trena med i `requirements.txt`.
+  Ein lagra modell kan ikkje alltid lastast med ein annan versjon.
+- `.python-version` set Python-versjonen på Render til den same som lokalt.
+
+Oppsett på Render: *New → Web Service*, vel repoet, *Build Command* `pip install -r requirements.txt`,
+*Start Command* `python app.py`, *Instance Type* Free.
 
 ## Struktur
 
@@ -153,4 +172,4 @@ Treninga blir ikkje køyrd ved publisering, så hugs å committe den endelege mo
 
 ## Bruk av AI-verktøy
 
-Claude (Anthropic) vart brukt til å kartleggje tilgjengelege datasett.
+Claude (Anthropic) vart brukt til å kartleggje tilgjengelege datasett, og for deployment av nettsida då vi ikkje var kjent med gradle og render.
