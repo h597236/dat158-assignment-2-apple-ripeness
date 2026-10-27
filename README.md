@@ -162,4 +162,10 @@ controls the size of the crop; the box should cover one apple with a little foli
 - Pedregosa, F. et al. (2011). _Scikit-learn: Machine Learning in Python._ JMLR 12.
 ## Use of AI tools
  
-Claude (Anthropic) was used to survey available datasets, and for deploying the website, as we were not familiar with Gradio and Render, we also wrote the readme in Norwegian initially and used AI to translate it to English.
+Claude (Anthropic) was used to survey available datasets, and for deploying the website, as we were not familiar with Gradio and Render, 
+we also wrote the readme in Norwegian initially and used AI to translate it to English.
+Claude was also used to help set up the model selection. It suggested which models from the
+course to compare, how to compare them fairly (cross-validation grouped by photo, F1 instead of
+accuracy because of the class imbalance), and how to choose the decision threshold. The choice
+itself was based on the results: the cross-validation scores from `train.py`, and our own testing
+of the website on images from outside the dataset.
