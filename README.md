@@ -66,7 +66,8 @@ python app.py
    Without the flags, the script picks whatever is best in cross-validation, which is not the same.
    Use `--quick` for a faster test run.
 4. `app.py` starts the website. Open the link it prints.
-   Optional, for analysis and the report:
+
+Optional, for analysis and the report:
 
 ```
 python src/robustness.py
@@ -76,7 +77,8 @@ python src/check_labels.py
 - `robustness.py` tests how well the feature sets handle changed lighting and cameras, and creates `reports/robustness.png`.
 - `check_labels.py` shows what share of the apples are labelled ripe, depending on how red they are, and creates
   `reports/label_check.png`.
-  To look at the data and results, open `notebooks/explore.ipynb`. It doesn't train anything.
+
+To look at the data and results, open `notebooks/explore.ipynb`. It doesn't train anything.
 
 ## Deployment
 
@@ -92,8 +94,9 @@ Training is not run during deployment, so:
 - `scikit-learn` is pinned in `requirements.txt` to the same version the model was trained with.
   A saved model can't always be loaded with a different version.
 - `.python-version` sets the Python version on Render to the same one used locally.
-  Setup on Render: _New → Web Service_, choose the repo, _Build Command_ `pip install -r requirements.txt`,
-  _Start Command_ `python app.py`, _Instance Type_ Free.
+
+Setup on Render: _New → Web Service_, choose the repo, _Build Command_ `pip install -r requirements.txt`,
+_Start Command_ `python app.py`, _Instance Type_ Free.
 
 ## Structure
 
