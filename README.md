@@ -5,6 +5,8 @@ Final project in DAT158. Intended as a first step towards perception for an appl
 
 **🍎 Try the website: https://dat158-assignment-2-apple-ripeness.onrender.com/** (the first load can take about a minute)
 
+ **📄 Read the report: [report](DAT158_ML_assignment_2.pdf)**
+
 **Definition:** An apple counts as _ripe_ when it is red.
 This is a proxy, not a measurement of starch, firmness or sugar – see _Limitations_.
 
